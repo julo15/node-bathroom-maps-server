@@ -25,7 +25,6 @@ exports.testAddBathroom = {
 
     addFirst: function(test) {
         debugger;
-        test.expect(11);
 
         impl.addBathroom(lat, lon, name, cat, false, function(result) {
             console.log("ADD BATHROOM RESULT");
@@ -50,6 +49,8 @@ exports.testAddBathroom = {
                 test.ok(bathroom.lon == lon);
                 test.ok(bathroom.name == name);
                 test.ok(bathroom.category == cat);
+                test.ok(bathroom.rating.count == 0);
+                test.ok(bathroom.rating.reviews.length == 0);
 
                 idToRemove = bathroom._id;
 
@@ -86,6 +87,7 @@ exports.testAddBathroom = {
             test.ok(bathroom.lon == lon);
             test.ok(bathroom.name == name);
             test.ok(bathroom.category == cat);
+            test.ok(bathroom.reviews == null);
 
             // Check that active bathroom count equals 1
             impl.getBathrooms(false, function(result) {
@@ -97,6 +99,54 @@ exports.testAddBathroom = {
                     test.ok(result.result.ok);
                     test.equal(result.bathrooms.length, 2);
                     test.done();
+                });
+            });
+        });
+    },
+
+    reviewSuccess: function(test) {
+
+        var reviews = [
+            {
+                rating: 3,
+                text: "This bathroom is okay"
+            },
+            {
+                rating: 5,
+                text: "This bathroom ROCKS!"
+            }
+        ];
+
+        impl.addReview(idToRemove, reviews[0].rating, reviews[0].text, function(result) {
+            test.equal(result.result.ok, 1);
+
+            impl.getBathrooms(false, function(result) {
+                test.ok(result.result.ok);
+                test.equal(result.bathrooms.length, 1);
+
+                var bathroom = result.bathrooms[0];
+                //test.ok(bathroom.rating.reviews.length == 0, 'Check review does not get returned in getBathrooms');
+                test.ok(bathroom.rating.reviews.length == 1);
+                test.ok(bathroom.rating.reviews[0].rating == reviews[0].rating);
+                test.ok(bathroom.rating.reviews[0].text == reviews[0].text);
+                test.equal(bathroom.rating.avg, reviews[0].rating);
+                test.equal(bathroom.rating.count, 1);
+
+                impl.addReview(idToRemove, reviews[1].rating, reviews[1].text, function(result) {
+                    test.equal(result.result.ok, 1);
+                    impl.getBathrooms(false, function(result) {
+                        test.ok(result.result.ok);
+                        test.equal(result.bathrooms.length, 1);
+
+                        var bathroom = result.bathrooms[0];
+
+                        test.ok(bathroom.rating.reviews.length == 2);
+                        test.ok(bathroom.rating.reviews[1].rating == reviews[1].rating);
+                        test.ok(bathroom.rating.reviews[1].text == reviews[1].text);
+                        test.equal(bathroom.rating.avg, (reviews[0].rating + reviews[1].rating) / 2);
+                        test.equal(bathroom.rating.count, 2);
+                        test.done();
+                    });
                 });
             });
         });
@@ -164,6 +214,7 @@ exports.testAddBathroom = {
         });
     },
 
+/*
     removeBathroom: function(test) {
         impl.removeBathroom(idToRemove, function(result) {
             test.equal(result.result.ok, 1);
@@ -174,7 +225,7 @@ exports.testAddBathroom = {
             });
         });
     },
-
+*/
     cleanupTest: function(test) {
         impl.shutdown();
         test.done();

@@ -29,6 +29,18 @@ module.exports = function(mongoUrl) {
             pending: {
                 'type': Boolean,
                 'default': false
+            },
+            rating: {
+                avg: Number,
+                count: {
+                    'type': Number,
+                    'default': 0
+                },
+                reviews: [{
+                    rating: Number,
+                    text: String,
+                    date: Date
+                }]
             }
         });
         Bathroom = mongoose.model('Bathroom', bathroomSchema, 'toilets');
@@ -179,6 +191,59 @@ module.exports = function(mongoUrl) {
                 callback(out);
             }
         });
+    };
+
+    exports.addReview = function(id, rating, text, callback) {
+
+        var out = {
+            result: {
+                ok: 0
+            }
+        };
+
+        if (id == null) {
+            out.result.text = 'id param missing';
+        } else if (!helpers.isNumeric(rating)) {
+            out.result.text = 'rating param missing or not numeric';
+        } else if (text == null) {
+            out.result.text = 'text param missing';
+        } else {
+            out.result.ok = 1;
+        }
+
+        if (out.result.ok) {
+            Bathroom.find({ _id: id }, function(err, bathroomsResult) {
+                if (bathroomsResult.length == 1) {
+                    var bathroom = bathroomsResult[0];
+                    bathroom.rating.reviews.push({
+                        rating: rating,
+                        text: text,
+                        date: new Date()
+                    });
+
+                    // Re-calculate avg and count
+                    bathroom.rating.avg = 0;
+                    bathroom.rating.count = bathroom.rating.reviews.length;
+                    if (bathroom.rating.count > 0) {
+                        for (var i = 0; i < bathroom.rating.reviews.length; i++) {
+                            bathroom.rating.avg += bathroom.rating.reviews[i].rating;
+                        }
+                        bathroom.rating.avg /= bathroom.rating.count;
+                    }
+
+                    bathroom.save(function(err) {
+                        out.result.ok = (err == null) ? 1 : 0;
+                        callback(out);
+                    });
+                } else {
+                    out.result.ok = 0;
+                    out.result.text = 'id not found';
+                    callback(out);
+                }
+            });
+        } else {
+            callback(out);
+        }
     };
 
     exports.clearDatabase = function(callback) {

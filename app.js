@@ -58,6 +58,14 @@ app.get('/', function(req, res) {
     impl.modifyBathroom(id, lat, lon, name, cat, pending, function(result) {
         res.json(result);
     });
+}).get('/addReview', function(req, res) {
+    var query = helpers.getQueryParameters(req);
+    var id = query.id;
+    var rating = (query.rating != null) ? parseInt(query.rating) : null;
+    var text = query.text;
+    impl.addReview(id, rating, text, function(result) {
+        res.json(result);
+    });
 }).get('/testparam', function(req, res) {
     testParam(req, res);
 });
