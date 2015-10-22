@@ -1,0 +1,10 @@
+{ "_id" : { "$oid" : "5608e0fe2520619dac4bcfbc" }, "category" : "Public", "lat" : 47.621782, "lon" : -122.331998, "name" : "Cascade Playground" }
+{ "_id" : { "$oid" : "5608e1452520619dac4bcfbd" }, "category" : "Public", "lat" : 47.6278, "lon" : -122.29767, "name" : "Lower Ravenna Park" }
+{ "_id" : { "$oid" : "561b7a725ec312d62a57db0b" }, "lat" : 47.67269898278236, "lon" : -122.3128402233124, "name" : "Cowen Park", "category" : "Public" }
+{ "_id" : { "$oid" : "561b7ab85ec312d62a57db0c" }, "lat" : 47.67177424866869, "lon" : -122.3055768013, "name" : "Mid Ravenna Park", "category" : "Public" }
+{ "_id" : { "$oid" : "561b7ca35ec312d62a57db0d" }, "lat" : 47.61666340846288, "lon" : -122.3194813728333, "name" : "Cal Anderson Park", "category" : "Public" }
+{ "_id" : { "$oid" : "561c0554d68098dd2c8cf06c" }, "lat" : 47.61902285241042, "lon" : -122.3381924629211, "name" : "Muz's toilet", "category" : "Public" }
+{ "_id" : { "$oid" : "5626c2e703b225880aba24af" }, "lat" : 47.62236385985822, "lon" : -122.3257255554199, "name" : "Shitty Bathroom", "category" : "Public", "pending" : false }
+{ "_id" : { "$oid" : "56283421efb0f80d0f4c4d7b" }, "lat" : 47.62710743435571, "lon" : -122.3027229309081, "name" : "Post season", "category" : "Public", "pending" : false }
+{ "_id" : { "$oid" : "5628342defb0f80d0f4c4d7c" }, "lat" : 47.63073713507439, "lon" : -122.3123359680175, "name" : "Best bathroom", "category" : "Public", "pending" : false, "rating" : { "reviews" : [ { "rating" : 2, "text" : "okay", "_id" : { "$oid" : "5628a3ea700eb82c1fafa560" } }, { "rating" : 3, "text" : "better", "date" : { "$date" : "2015-10-22T08:57:14.789+0000" }, "_id" : { "$oid" : "5628a4ea1eae4f351fb500f9" } }, { "rating" : 5, "text" : "best", "date" : { "$date" : "2015-10-22T09:11:01.902+0000" }, "_id" : { "$oid" : "5628a825cadf34991f2300dd" } } ], "avg" : 3.333333333333333, "count" : 3 }, "__v" : 3 }
+{ "_id" : { "$oid" : "562882e14d18520f1adcdb30" }, "lat" : 47.61970264178986, "lon" : -122.3119068145751, "name" : "New bathroom", "category" : "Public", "pending" : true }
