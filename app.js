@@ -37,7 +37,6 @@ app.get('/', function(req, res) {
     var cat = query.cat;
     var pending = (query.admin == null);
 
-    // Fake comment
     impl.addBathroom(lat, lon, name, cat, pending, function(result) {
         res.json(result);
     });
