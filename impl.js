@@ -129,18 +129,6 @@ module.exports = function(mongoUrl) {
                 };
                 callback(out);
             });
-
-/*
-            mongoClient.connect(mongoUrl, function(err, db) {
-                assert.equal(null, err);
-                db.collection(isPending ? 'pendingtoilets' : 'toilets').deleteOne({
-                    "_id": new mongo.ObjectId(id)
-                }, function(err, result) {
-                    assert.equal(err, null);
-                    console.log("removed!");
-                });
-            });
-*/
         } else {
             var out = {
                 result: {
@@ -205,34 +193,6 @@ module.exports = function(mongoUrl) {
     };
     return exports;
 };
-
-/*
-function findBathrooms(db, pending, callback) {
-    console.log('BEGIN: findBathrooms');
-    var collection = db.collection('toilets');
-    var cursor = pending ?
-        collection.find() :
-        collection.find({
-            $or: [
-                { pending: { $exists: false }},
-                { pending: false }
-            ]
-        });
-    cursor.toArray(function(err, docs) {
-        console.log('BEGIN: toArray');
-        var out = {
-            result: {
-                ok: 1
-            },
-            bathrooms: docs
-        };
-        callback(out);
-        console.log('END: toArray');
-    });
-
-    console.log('END: findBathrooms');
-}
-*/
 
 function bathroomParamsToString(lat, lon, name, cat) {
     return "[lat = " + lat +
