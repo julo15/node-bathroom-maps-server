@@ -31,7 +31,10 @@ module.exports = function(mongoUrl) {
                 'default': false
             },
             rating: {
-                avg: Number,
+                avg: {
+                    'type': Number,
+                    'default': 0
+                },
                 count: {
                     'type': Number,
                     'default': 0
