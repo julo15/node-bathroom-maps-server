@@ -36,6 +36,9 @@ exports.testAddBathroom = {
             test.ok(bathroom.lon == lon);
             test.ok(bathroom.name == name);
             test.ok(bathroom.category == cat);
+            test.ok(bathroom.rating != null, 'Check added bathroom has rating element');
+            test.ok(bathroom.rating.count == 0, 'Check added bathroom has 0 review count');
+            test.ok(bathroom.rating.avg == 0, 'Check added bathroom has 0 review avg');
 
             impl.getBathrooms(false , function(result) {
                 console.log("GET BATHROOM RESULT:");

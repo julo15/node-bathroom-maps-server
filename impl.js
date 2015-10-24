@@ -95,28 +95,31 @@ module.exports = function(mongoUrl) {
 
             console.log('BEGIN: addBathroom ' + bathroomParamsToString(lat, lon, name, cat));
 
-            mongoClient.connect(mongoUrl, function(err, db) {
-                assert.equal(null, err);
-                db.collection('toilets').insertOne({
-                    "lat": lat,
-                    "lon": lon,
-                    "name": name,
-                    "category": cat,
-                    "pending": pending
-                }, function(err, mongoResult) {
-                    assert.equal(err, null);
-                    console.log("added!");
+            var bathroom = new Bathroom({
+                lat: lat,
+                lon: lon,
+                name: name,
+                category: cat,
+                pending: pending});
 
+            bathroom.save(function(err, bathroom) {
+                if (err) {
                     var out = {
                         result: {
-                            ok: 1,
-                            text: status
-                        },
-                        bathroom: mongoResult.ops[0]
+                            ok: 0,
+                            text: err
+                        }
                     };
                     callback(out);
-                    db.close();
-                });
+                } else {
+                    var out = {
+                        result: {
+                            ok: 1
+                        },
+                        bathroom: bathroom
+                    };
+                    callback(out);
+                }
             });
 
             console.log('END: addBathroom');
@@ -236,6 +239,7 @@ module.exports = function(mongoUrl) {
 
                     bathroom.save(function(err) {
                         out.result.ok = (err == null) ? 1 : 0;
+                        out.bathroom = bathroom;
                         callback(out);
                     });
                 } else {
