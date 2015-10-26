@@ -66,6 +66,13 @@ app.get('/', function(req, res) {
     impl.addReview(id, rating, text, function(result) {
         res.json(result);
     });
+}).get('/removeReview', function(req, res) {
+    var query = helpers.getQueryParameters(req);
+    var id = query.id;
+    var reviewId = query.reviewId;
+    impl.removeReview(id, reviewId, function(result) {
+        res.json(result);
+    });
 }).get('/testparam', function(req, res) {
     testParam(req, res);
 });

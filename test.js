@@ -1,11 +1,23 @@
 var impl = require('./impl')('mongodb://127.0.0.1:27017/unittest');
 
 var idToRemove;
+var reviewIdToRemove;
 
 var lat = 45;
 var lon = 145;
 var name = "Worst bathroom";
 var cat = "Fake category";
+
+var reviews = [
+    {
+        rating: 3,
+        text: "This bathroom is okay"
+    },
+    {
+        rating: 5,
+        text: "This bathroom ROCKS!"
+    }
+];
 
 exports.testAddBathroom = {
 
@@ -109,17 +121,6 @@ exports.testAddBathroom = {
 
     reviewSuccess: function(test) {
 
-        var reviews = [
-            {
-                rating: 3,
-                text: "This bathroom is okay"
-            },
-            {
-                rating: 5,
-                text: "This bathroom ROCKS!"
-            }
-        ];
-
         impl.addReview(idToRemove, reviews[0].rating, reviews[0].text, function(result) {
             test.equal(result.result.ok, 1);
 
@@ -142,15 +143,46 @@ exports.testAddBathroom = {
                         test.equal(result.bathrooms.length, 1);
 
                         var bathroom = result.bathrooms[0];
-
                         test.ok(bathroom.rating.reviews.length == 2);
                         test.ok(bathroom.rating.reviews[1].rating == reviews[1].rating);
                         test.ok(bathroom.rating.reviews[1].text == reviews[1].text);
                         test.equal(bathroom.rating.avg, (reviews[0].rating + reviews[1].rating) / 2);
                         test.equal(bathroom.rating.count, 2);
+
+                        reviewIdToRemove = bathroom.rating.reviews[1]._id;
+
                         test.done();
                     });
                 });
+            });
+        });
+    },
+
+    reviewRemove: function(test) {
+
+        impl.removeReview(idToRemove, reviewIdToRemove, function(result) {
+            test.equal(result.result.ok, 1, 'Check removeReview succeeded');
+
+            impl.getBathrooms(true, function(result) {
+                test.ok(result.result.ok);
+                test.equal(result.bathrooms.length, 2, 'Check review was removed');
+
+                var found = false;
+                for (var i = 0; !found && (i < result.bathrooms.length); i++) {
+                    var bathroom = result.bathrooms[i];
+                    if (bathroom._id.equals(idToRemove)) {
+                        found = true;
+
+                        test.equal(bathroom.rating.reviews.length, 1, 'Check reviews array is length 1');
+                        test.equal(bathroom.rating.reviews[0].rating, reviews[0].rating, 'Check review rating is correct');
+                        test.equal(bathroom.rating.count, 1, 'Check rating count');
+                        test.equal(bathroom.rating.avg, reviews[0].rating, 'Check rating avg');
+                        console.log(bathroom);
+                    }
+                }
+
+                test.ok(found, 'Ensuring we found the bathroom that had its review removed');
+                test.done();
             });
         });
     },
@@ -191,6 +223,7 @@ exports.testAddBathroom = {
     modifyName: function(test) {
         var modifiedName = "Best name";
         impl.modifyBathroom(idToRemove, null, null, modifiedName, null, null, function(result) {
+            console.log('MODIFYNAME');
             console.log(result);
             test.equal(result.result.ok, 1);
             test.equal(result.bathroom.pending, true);

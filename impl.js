@@ -253,6 +253,22 @@ module.exports = function(mongoUrl) {
         }
     };
 
+    exports.removeReview = function(bathroomId, reviewId, callback) {
+        // TODO: Null check
+        Bathroom.update({ _id: bathroomId }, 
+            { $pull: { "rating.reviews": { _id: reviewId } } },
+            null, function(err, numAffected) {
+                var out = {
+                    result: { ok: (err == null) ? 1 : 0 }
+                };
+                if (out.result.ok) {
+                    updateRatingsDocument(bathroomId, null, null, callback);
+                } else {
+                    callback(out);
+                }
+            });
+    };
+
     exports.clearDatabase = function(callback) {
         mongoClient.connect(mongoUrl, function(err, db) {
             assert.equal(null, err);
@@ -271,4 +287,41 @@ function bathroomParamsToString(lat, lon, name, cat) {
         ", lon = " + lon + 
         ", name = " + name +
         ", cat = " + cat + "]";
+}
+
+function updateRatingsDocument(id, newRating, newText, callback) {
+    var out = { result: { ok: 0 } };
+    Bathroom.find({ _id: id }, function(err, bathroomsResult) {
+        if (bathroomsResult.length == 1) {
+            var bathroom = bathroomsResult[0];
+
+            if (newRating != null) {
+                bathroom.rating.reviews.push({
+                    rating: rating,
+                    text: text,
+                    date: new Date()
+                });
+            }
+
+            // Re-calculate avg and count
+            bathroom.rating.avg = 0;
+            bathroom.rating.count = bathroom.rating.reviews.length;
+            if (bathroom.rating.count > 0) {
+                for (var i = 0; i < bathroom.rating.reviews.length; i++) {
+                    bathroom.rating.avg += bathroom.rating.reviews[i].rating;
+                }
+                bathroom.rating.avg /= bathroom.rating.count;
+            }
+
+            bathroom.save(function(err) {
+                out.result.ok = (err == null) ? 1 : 0;
+                out.bathroom = bathroom;
+                callback(out);
+            });
+        } else {
+            out.result.ok = 0;
+            out.result.text = 'id not found';
+            callback(out);
+        }
+    });
 }
