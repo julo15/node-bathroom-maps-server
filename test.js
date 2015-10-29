@@ -1,4 +1,4 @@
-var impl = require('./impl')('mongodb://127.0.0.1:27017/unittest');
+var impl = require('./impl')('mongodb://127.0.0.1:27017/unittest', null);
 
 var idToRemove;
 var reviewIdToRemove;

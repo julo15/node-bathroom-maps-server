@@ -9,15 +9,18 @@ var mongoClient = mongo.MongoClient;
 var mongoose = require('mongoose');
 var Bathroom;
 
-// Import winston logging
-var winston = require('winston');
+// Import logging
+var log = require('./log')();
 
 // Import helpers
 var helpers = require('./helpers');
 
 // Example mongoUrl: 'mongodb://127.0.0.1:27017/test'
-module.exports = function(mongoUrl) {
+module.exports = function(mongoUrl, baseLogFilename) {
     var exports = {};
+
+    // Init logger
+    var logger = log.createLogger(baseLogFilename);
 
     // Init mongoose
     mongoose.connect(mongoUrl);
@@ -57,8 +60,7 @@ module.exports = function(mongoUrl) {
     };
 
     exports.getBathrooms = function(pending, callback) {
-        winston.info('getBathrooms start');
-        console.log('BEGIN: getBathrooms');
+        logger.info('BEGIN: getBathrooms');
 
         var query = {};
         if (!pending) {
@@ -80,7 +82,7 @@ module.exports = function(mongoUrl) {
             callback(out);
         });
 
-        console.log('END: getBathrooms');
+       logger.info('END: getBathrooms');
     };
 
     exports.addBathroom = function(lat /* float */, lon /* float */, name, cat, pending /* bool */, callback) {
@@ -97,7 +99,7 @@ module.exports = function(mongoUrl) {
 
         if (status == "ok") {
 
-            console.log('BEGIN: addBathroom ' + bathroomParamsToString(lat, lon, name, cat));
+            logger.info('BEGIN: addBathroom ' + bathroomParamsToString(lat, lon, name, cat));
 
             var bathroom = new Bathroom({
                 lat: lat,
@@ -126,7 +128,7 @@ module.exports = function(mongoUrl) {
                 }
             });
 
-            console.log('END: addBathroom');
+            logger.info('END: addBathroom');
         } else {
             var out = {
                 result: {
@@ -141,7 +143,7 @@ module.exports = function(mongoUrl) {
     exports.removeBathroom = function(id, callback) {
         var status = "ok!";
         if (id != null) {
-            console.log('BEGIN: removeBathroom ' + id);
+            logger.info('BEGIN: removeBathroom ' + id);
 
             Bathroom.remove({ _id: id }, function(err) {
                 var out = {

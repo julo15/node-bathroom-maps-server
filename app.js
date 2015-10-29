@@ -1,13 +1,15 @@
 // Import winston and configure logger
-var winston = require('winston');
-initLogger();
+var log = require('./log')();
+var filename = log.createBaseFilename();
+var logger = log.createLogger(filename);
 
 // Import express
 var express = require('express');
 var app = express();
 
 // Import server code
-var impl = require('./impl')('mongodb://127.0.0.1:27017/test');
+var mongoUrl = 'mongodb://127.0.0.1:27017/' + ((process.argv.length == 3) ? process.argv[2] : 'test');
+var impl = require('./impl')(mongoUrl, filename + '.impl');
 var helpers = require('./helpers');
 
 // Middleware
@@ -25,12 +27,10 @@ app.get('/', function(req, res) {
     res.send('Up and running!');
 }).get('/bathrooms', function(req, res) {
     impl.getBathrooms(false /* pending */, function(doc) {
-        console.log(doc);
         res.json(doc);
     });
 }).get('/pendingbathrooms', function(req, res) {
     impl.getBathrooms(true /* pending */, function(doc) {
-        console.log(doc);
         res.json(doc);
     });
 }).get('/addbathroom', function(req, res) {
@@ -87,46 +87,8 @@ var server = app.listen(portNumber, function() {
     var host = server.address().address;
     var port = server.address().port;
 
-    winston.info('Server listening at http://%s:%s', host, port);
+    logger.info('Server listening at http://%s:%s', host, port);
 });
-
-function initLogger() {
-    var filename = './logs/' + new Date().toJSON().replace(/:/g, '.');
-    var timestamp = function() {
-        return new Date().toJSON();
-    };
-    var formatter = function(options) {
-        return options.timestamp() + ' ' +
-               options.level.toUpperCase() + '\t' +
-               ((undefined !== options.message) ? options.message : '') +
-               ((options.meta && Object.keys(options.meta).length) ? '\n\t' + JSON.stringify(options.meta) : '');
-    };
-
-    // log file
-    winston.add(winston.transports.File, {
-                    name: 'all-file',
-                    filename: filename + '.log',
-                    json: false,
-                    handleExceptions: true,
-                    humanReadableUnhandledExceptions: true,
-                    timestamp: timestamp,
-                    formatter: formatter
-                }
-            );
-
-            // err file
-    winston.add(winston.transports.File, {
-                    name: 'error-file',
-                    filename: filename + '.err',
-                    json: false,
-                    level: 'error',
-                    handleExceptions: true,
-                    humanReadableUnhandledExceptions: true,
-                    timestamp: timestamp,
-                    formatter: formatter
-                }
-            );
-}
 
 function testParam(req, res) {
     var query = helpers.getQueryParameters(req);
