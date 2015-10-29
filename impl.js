@@ -9,6 +9,9 @@ var mongoClient = mongo.MongoClient;
 var mongoose = require('mongoose');
 var Bathroom;
 
+// Import winston logging
+var winston = require('winston');
+
 // Import helpers
 var helpers = require('./helpers');
 
@@ -54,6 +57,7 @@ module.exports = function(mongoUrl) {
     };
 
     exports.getBathrooms = function(pending, callback) {
+        winston.info('getBathrooms start');
         console.log('BEGIN: getBathrooms');
 
         var query = {};

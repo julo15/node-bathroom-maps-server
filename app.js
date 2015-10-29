@@ -1,3 +1,7 @@
+// Import winston and configure logger
+var winston = require('winston');
+initLogger();
+
 // Import express
 var express = require('express');
 var app = express();
@@ -83,8 +87,46 @@ var server = app.listen(portNumber, function() {
     var host = server.address().address;
     var port = server.address().port;
 
-    console.log('Server listening at http://%s:%s', host, port);
+    winston.info('Server listening at http://%s:%s', host, port);
 });
+
+function initLogger() {
+    var filename = './logs/' + new Date().toJSON().replace(/:/g, '.');
+    var timestamp = function() {
+        return new Date().toJSON();
+    };
+    var formatter = function(options) {
+        return options.timestamp() + ' ' +
+               options.level.toUpperCase() + '\t' +
+               ((undefined !== options.message) ? options.message : '') +
+               ((options.meta && Object.keys(options.meta).length) ? '\n\t' + JSON.stringify(options.meta) : '');
+    };
+
+    // log file
+    winston.add(winston.transports.File, {
+                    name: 'all-file',
+                    filename: filename + '.log',
+                    json: false,
+                    handleExceptions: true,
+                    humanReadableUnhandledExceptions: true,
+                    timestamp: timestamp,
+                    formatter: formatter
+                }
+            );
+
+            // err file
+    winston.add(winston.transports.File, {
+                    name: 'error-file',
+                    filename: filename + '.err',
+                    json: false,
+                    level: 'error',
+                    handleExceptions: true,
+                    humanReadableUnhandledExceptions: true,
+                    timestamp: timestamp,
+                    formatter: formatter
+                }
+            );
+}
 
 function testParam(req, res) {
     var query = helpers.getQueryParameters(req);
