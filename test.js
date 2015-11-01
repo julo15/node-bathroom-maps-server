@@ -1,12 +1,21 @@
+var helpers = require('./helpers');
 var impl = require('./impl')('mongodb://127.0.0.1:27017/unittest', null);
 
 var idToRemove;
 var reviewIdToRemove;
 
+var id2;
+
 var lat = 45;
 var lon = 145;
 var name = "Worst bathroom";
 var cat = "Fake category";
+
+// distance is 3373km
+var lat2 = 50;
+var lon2 = 100;
+var name2 = "Pending bathroom";
+var cat2 = "Public";
 
 var reviews = [
     {
@@ -27,10 +36,12 @@ exports.testAddBathroom = {
         impl.clearDatabase(function(result) {
             test.ok(result == true, 'Check clearDatabase result');
 
-            impl.getBathrooms(false /* pending */, function(result) {
-                test.ok(result.result.ok == 1, 'Check getBathrooms succeeds');
-                test.ok(result.bathrooms.length == 0, 'Check bathrooms list is empty');
-                test.done();
+            impl.start(function() {
+                impl.getBathrooms(false /* pending */, function(result) {
+                    test.ok(result.result.ok == 1, 'Check getBathrooms succeeds');
+                    test.ok(result.bathrooms.length == 0, 'Check bathrooms list is empty');
+                    test.done();
+                });
             });
         });
     },
@@ -44,8 +55,8 @@ exports.testAddBathroom = {
             test.ok(result.result.ok == 1, 'Check addBathroom succeeds');
             
             var bathroom = result.bathroom;
-            test.ok(bathroom.lat == lat);
-            test.ok(bathroom.lon == lon);
+            test.equal(bathroom.lat, lat);
+            test.equal(bathroom.lon, lon);
             test.ok(bathroom.name == name);
             test.ok(bathroom.category == cat);
             test.ok(bathroom.rating != null, 'Check added bathroom has rating element');
@@ -60,8 +71,10 @@ exports.testAddBathroom = {
                 test.ok(result.bathrooms.length == 1, 'Check bathroom list is length 1');
 
                 var bathroom = result.bathrooms[0];
-                test.ok(bathroom.lat == lat);
-                test.ok(bathroom.lon == lon);
+                console.log(bathroom.lat);
+                console.log(lat);
+                test.equal(bathroom.lat, lat);
+                test.equal(bathroom.lon, lon);
                 test.ok(bathroom.name == name);
                 test.ok(bathroom.category == cat);
                 test.ok(bathroom.rating.count == 0);
@@ -88,20 +101,21 @@ exports.testAddBathroom = {
     },
 
     addPending: function(test) {
-        var lat = 50;
-        var lon = 100;
-        var name = "Pending bathroom";
-        var cat = "Public";
-
         // Add a pending bathroom. Remember that there is already an active bathroom in the db.
-        impl.addBathroom(lat, lon, name, cat, true, function(result) {
+        impl.addBathroom(lat2, lon2, name2, cat2, true, function(result) {
             test.ok(result.result.ok == 1, 'Check addBathroom pending succeeds');
+
+            console.log('FOFOFOFOOF');
+            console.log(result);
             
             var bathroom = result.bathroom;
-            test.ok(bathroom.lat == lat);
-            test.ok(bathroom.lon == lon);
-            test.ok(bathroom.name == name);
-            test.ok(bathroom.category == cat);
+            console.log(bathroom.loc);
+            console.log(typeof bathroom);
+            id2 = bathroom._id;
+            test.equal(bathroom.lat, lat2);
+            test.equal(bathroom.lon, lon2);
+            test.ok(bathroom.name == name2);
+            test.ok(bathroom.category == cat2);
             test.ok(bathroom.reviews == null);
 
             // Check that active bathroom count equals 1
@@ -123,12 +137,14 @@ exports.testAddBathroom = {
 
         impl.addReview(idToRemove, reviews[0].rating, reviews[0].text, function(result) {
             test.equal(result.result.ok, 1);
+            test.equal(result.bathroom.lat, lat);
 
             impl.getBathrooms(false, function(result) {
                 test.ok(result.result.ok);
                 test.equal(result.bathrooms.length, 1);
 
                 var bathroom = result.bathrooms[0];
+                test.equal(bathroom.lat, lat);
                 //test.ok(bathroom.rating.reviews.length == 0, 'Check review does not get returned in getBathrooms');
                 test.ok(bathroom.rating.reviews.length == 1);
                 test.ok(bathroom.rating.reviews[0].rating == reviews[0].rating);
@@ -170,9 +186,11 @@ exports.testAddBathroom = {
                 var found = false;
                 for (var i = 0; !found && (i < result.bathrooms.length); i++) {
                     var bathroom = result.bathrooms[i];
-                    if (bathroom._id.equals(idToRemove)) {
+                    if (bathroom._id.toString() === idToRemove.toString()) {
                         found = true;
 
+                        test.equal(bathroom.lat, lat);
+                        test.equal(bathroom.lon, lon);
                         test.equal(bathroom.rating.reviews.length, 1, 'Check reviews array is length 1');
                         test.equal(bathroom.rating.reviews[0].rating, reviews[0].rating, 'Check review rating is correct');
                         test.equal(bathroom.rating.count, 1, 'Check rating count');
@@ -235,6 +253,30 @@ exports.testAddBathroom = {
         });
     },
 
+    getNearbyBathrooms: function(test) {
+        impl.modifyBathroom(id2, null, null, null, null, true, function(result) {
+            test.equal(result.result.ok, 1);
+            test.ok(result.bathroom._id.toString() === id2.toString());
+            test.equal(result.bathroom.pending, true);
+
+            impl.getNearbyBathrooms(44.999, 144.999, 150, function(result) {
+                test.equal(result.result.ok, 1);
+                test.equal(result.bathrooms.length, 1, 'Ensure only one nearby bathroom returned');
+                test.ok(result.bathrooms[0]._id.toString() === idToRemove.toString(), 'Ensure id1 was returned');
+
+                impl.getNearbyBathrooms(44.999, 144.999, 4000000, function(result) {
+                    console.log('OFODKFJKSLDFJDKLSFJDKLSFJKLSDJFKLDSJFKLDSJFKLDJSFKLDSJFKLDJSFKLJSDFDSJ');
+                    console.log(result);
+                    console.log(idToRemove);
+                    test.equal(result.result.ok, 1);
+                    test.equal(result.bathrooms.length, 2, 'Ensure both nearby bathrooms returned');
+                    test.ok(result.bathrooms[0]._id.toString() === idToRemove.toString(), 'Ensure id1 was returned');
+                    test.ok(result.bathrooms[1]._id.toString() === id2.toString(), 'Ensure id2 was returned');
+                    test.done();
+                });
+            });
+        });
+    },
 
     removeNull: function(test) {
         impl.removeBathroom(null, function(result) {
@@ -282,8 +324,8 @@ function testAddBathroomHelper(test, lat, lon, name, cat, admin, expectSuccess) 
         
         if (addBathroomSucceeded && expectSuccess) {
             var bathroom = result.bathroom;
-            test.ok(bathroom.lat == lat);
-            test.ok(bathroom.lon == lon);
+            test.equals(bathroom.lat, lat);
+            test.equals(bathroom.lon, lon);
             test.ok(bathroom.name == name);
             test.ok(bathroom.category == cat);
 
@@ -295,8 +337,8 @@ function testAddBathroomHelper(test, lat, lon, name, cat, admin, expectSuccess) 
                 test.ok(result.bathrooms.length == 1, 'Check bathroom list is length 1');
 
                 var bathroom = result.bathrooms[0];
-                test.ok(bathroom.lat == lat);
-                test.ok(bathroom.lon == lon);
+                test.equal(bathroom.lat, lat);
+                test.equal(bathroom.lon, lon);
                 test.ok(bathroom.name == name);
                 test.ok(bathroom.category == cat);
 
