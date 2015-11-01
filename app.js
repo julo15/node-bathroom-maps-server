@@ -26,7 +26,11 @@ app.use(function(req, res, next) {
 app.get('/', function(req, res) {
     res.send('Up and running!');
 }).get('/bathrooms', function(req, res) {
-    impl.getBathrooms(false /* pending */, function(doc) {
+    var query = helpers.getQueryParameters(req);
+    var lat = parseFloat(query.lat);
+    var lon = parseFloat(query.lon);
+    var distance = parseFloat(query.distance);
+    impl.getNearbyBathrooms(lat, lon, distance, function(doc) {
         res.json(doc);
     });
 }).get('/pendingbathrooms', function(req, res) {
@@ -81,13 +85,15 @@ app.get('/', function(req, res) {
     testParam(req, res);
 });
 
-// Start server
-var portNumber = 8080;
-var server = app.listen(portNumber, function() {
-    var host = server.address().address;
-    var port = server.address().port;
+impl.start(function() {
+    // Start server
+    var portNumber = 8080;
+    var server = app.listen(portNumber, function() {
+        var host = server.address().address;
+        var port = server.address().port;
 
-    logger.info('Server listening at http://%s:%s', host, port);
+        logger.info('Server listening at http://%s:%s', host, port);
+    });
 });
 
 function testParam(req, res) {
