@@ -35,7 +35,6 @@ exports.testAddBathroom = {
 
         impl.clearDatabase(function(result) {
             test.ok(result == true, 'Check clearDatabase result');
-
             impl.start(function() {
                 impl.getBathrooms(false /* pending */, function(result) {
                     test.ok(result.result.ok == 1, 'Check getBathrooms succeeds');
@@ -253,26 +252,37 @@ exports.testAddBathroom = {
         });
     },
 
-    getNearbyBathrooms: function(test) {
-        impl.modifyBathroom(id2, null, null, null, null, true, function(result) {
+    getNearbyBathroomsTest: function(test) {
+        impl.modifyBathroom(idToRemove, null, null, null, null, false, function(result) {
             test.equal(result.result.ok, 1);
-            test.ok(result.bathroom._id.toString() === id2.toString());
-            test.equal(result.bathroom.pending, true);
+            test.ok(result.bathroom != null);
+            test.ok(result.bathroom._id.toString() === idToRemove.toString());
+            test.equal(result.bathroom.pending, false);
 
-            impl.getNearbyBathrooms(44.999, 144.999, 150, function(result) {
-                test.equal(result.result.ok, 1);
-                test.equal(result.bathrooms.length, 1, 'Ensure only one nearby bathroom returned');
-                test.ok(result.bathrooms[0]._id.toString() === idToRemove.toString(), 'Ensure id1 was returned');
+            impl.getNearbyBathrooms(44.999, 144.999, 150, function(result2) {
+                console.log(result2);
+                test.equal(result2.result.ok, 1);
+                test.equal(result2.bathrooms.length, 1, 'Ensure only one nearby bathroom returned');
+                test.ok(result2.bathrooms[0]._id.toString() === idToRemove.toString(), 'Ensure id1 was returned');
 
-                impl.getNearbyBathrooms(44.999, 144.999, 4000000, function(result) {
-                    console.log('OFODKFJKSLDFJDKLSFJDKLSFJKLSDJFKLDSJFKLDSJFKLDJSFKLDSJFKLDJSFKLJSDFDSJ');
-                    console.log(result);
-                    console.log(idToRemove);
-                    test.equal(result.result.ok, 1);
-                    test.equal(result.bathrooms.length, 2, 'Ensure both nearby bathrooms returned');
-                    test.ok(result.bathrooms[0]._id.toString() === idToRemove.toString(), 'Ensure id1 was returned');
-                    test.ok(result.bathrooms[1]._id.toString() === id2.toString(), 'Ensure id2 was returned');
-                    test.done();
+                impl.getNearbyBathrooms(44.999, 144.999, 4000000, function(result3) {
+                    test.equal(result3.result.ok, 1);
+                    test.equal(result3.bathrooms.length, 1, 'Ensure the pending bathromo was filtered out');
+
+                    impl.modifyBathroom(id2, null, null, null, null, false, function(result4) {
+                        test.equal(result4.result.ok, 1);
+                        test.ok(result4.bathroom != null);
+                        test.ok(result4.bathroom._id.toString() === id2.toString());
+                        test.equal(result4.bathroom.pending, false);
+                        
+                        impl.getNearbyBathrooms(44.999, 144.999, 4000000, function(result5) {
+                            test.equal(result5.result.ok, 1);
+                            test.equal(result5.bathrooms.length, 2, 'Ensure both nearby bathrooms returned');
+                            test.ok(result5.bathrooms[0]._id.toString() === idToRemove.toString(), 'Ensure id1 was returned');
+                            test.ok(result5.bathrooms[1]._id.toString() === id2.toString(), 'Ensure id2 was returned');
+                            test.done();
+                        });
+                    });
                 });
             });
         });
@@ -312,15 +322,9 @@ exports.testAddBathroom = {
 
 function testAddBathroomHelper(test, lat, lon, name, cat, admin, expectSuccess) {
     impl.addBathroom(lat, lon, name, cat, true, function(result) {
-        console.log("ADD BATHROOM RESULT HELPER");
-        console.log(result);
         var addBathroomSucceeded = (result.result.ok == 1);
 
-        console.log('addBathroomSucceeded = ' + addBathroomSucceeded);
-        console.log('expectSuccess = ' + expectSuccess);
         test.ok(addBathroomSucceeded == expectSuccess, 'Check addBathroom succeed/failure');
-
-        console.log('DONE WITH OK TEST HELPER!');
         
         if (addBathroomSucceeded && expectSuccess) {
             var bathroom = result.bathroom;
@@ -329,7 +333,7 @@ function testAddBathroomHelper(test, lat, lon, name, cat, admin, expectSuccess) 
             test.ok(bathroom.name == name);
             test.ok(bathroom.category == cat);
 
-            impl.getBathrooms(false , function(result) {
+            impl.getBathrooms(false, function(result) {
                 console.log("GET BATHROOM RESULT:");
                 console.log(result);
 
@@ -345,7 +349,6 @@ function testAddBathroomHelper(test, lat, lon, name, cat, admin, expectSuccess) 
                 test.done();
             });
         } else {
-            console.log("DONE!!!");
             test.done();
         }
     });

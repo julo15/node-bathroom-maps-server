@@ -105,7 +105,11 @@ module.exports = function(mongoUrl, baseLogFilename) {
                         $geometry: helpers.create2dSphere(lat, lon),
                         $maxDistance: distance
                     }
-                }
+                },
+                $or: [
+                    { pending: { $exists: false }},
+                    { pending: false }
+                ]
             };
             Bathroom.find(query, function(err, bathroomsResult) {
                 doApiCallback((err == null), null, { bathrooms: bathroomsResult }, true, callback);
