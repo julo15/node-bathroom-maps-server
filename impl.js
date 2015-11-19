@@ -89,16 +89,17 @@ module.exports = function(mongoUrl, baseLogFilename) {
     exports.getNearbyBathrooms = function(lat, lon, distance, callback) {
         logger.info('BEGIN: getNearbyBathrooms');
 
-        var status = "ok";
-        if (!helpers.isNumeric(lat)) {
-            status = "latitude invalid";
-        } else if (!helpers.isNumeric(lon)) {
-            status = "longitude invalid";
-        } else if (!helpers.isNumeric(distance)) {
-            status = "distance invalid";
-        } 
+        new Promise(function(resolve, reject) {
+            if (!helpers.isNumeric(lat)) {
+                throw new Error("latitude invalid");
+            }
+            if (!helpers.isNumeric(lon)) {
+                throw new Error("longitude invalid");
+            }
+            if (!helpers.isNumeric(distance)) {
+                throw new Error("distance invalid");
+            } 
 
-        if (status == "ok") {
             var query = {
                 loc: {
                     $near: {
@@ -112,48 +113,62 @@ module.exports = function(mongoUrl, baseLogFilename) {
                 ]
             };
             Bathroom.find(query, function(err, bathroomsResult) {
-                doApiCallback((err == null), null, { bathrooms: bathroomsResult }, true, callback);
+                err ? reject(err) : resolve({ bathrooms: bathroomsResult });
             });
-        } else {
-            doFailureApiCallback(status, callback);
-        }
+        })
+        .then(function(data) {
+            doSuccessApiCallback(data, true, callback);
+        })
+        .catch(function(error) {
+            doFailureApiCallback(error, callback);
+        });
 
        logger.info('END: getNearbyBathrooms');
     };
 
     exports.getBathrooms = function(pending, callback) {
-        logger.info('BEGIN: getBathrooms');
+        logger.info('BEGIN: getBathroomsPromise');
 
-        var query = {};
-        if (!pending) {
-            query = {
-                $or: [
-                    { pending: { $exists: false }},
-                    { pending: false }
-                ]
-            };
-        }
+        new Promise(function(resolve, reject) {
+            var query = {};
+            if (!pending) {
+                query = {
+                    $or: [
+                        { pending: { $exists: false }},
+                        { pending: false }
+                    ]
+                };
+            }
 
-        Bathroom.find(query, function(err, bathroomsResult) {
-            doApiCallback((err == null), null, { bathrooms: bathroomsResult }, true, callback);
+            Bathroom.find(query, function(err, bathroomsResult) {
+                err ? reject(err) : resolve({ bathrooms: bathroomsResult });
+            });
+        })
+        .then(function(bathroomsResult) {
+            doSuccessApiCallback(bathroomsResult, true /* sanitize */, callback);
+        })
+        .catch(function(err) {
+            doFailureApiCallback(err, callback);
         });
 
-       logger.info('END: getBathrooms');
+       logger.info('END: getBathroomsPromise');
     };
 
     exports.addBathroom = function(lat /* float */, lon /* float */, name, cat, pending /* bool */, callback) {
-        var status = "ok";
-        if (!helpers.isNumeric(lat)) {
-            status = "latitude invalid";
-        } else if (!helpers.isNumeric(lon)) {
-            status = "longitude invalid";
-        } else if (name == null) {
-            status = "no name found";
-        } else if (cat == null) {
-            status = "no cat found";
-        }
 
-        if (status == "ok") {
+        new Promise(function(resolve, reject) {
+            if (!helpers.isNumeric(lat)) {
+                throw new Error("latitude invalid");
+            }
+            if (!helpers.isNumeric(lon)) {
+                throw new Error("longitude invalid");
+            }
+            if (name == null) {
+                throw new Error("no name found");
+            }
+            if (cat == null) {
+                throw new Error("no cat found");
+            }
 
             logger.info('BEGIN: addBathroom ' + bathroomParamsToString(lat, lon, name, cat));
 
@@ -164,102 +179,129 @@ module.exports = function(mongoUrl, baseLogFilename) {
                 pending: pending});
 
             bathroom.save(function(err, bathroom) {
-                doApiCallback((err == null), err, (err == null) ? { bathroom: bathroom } : null, true, callback);
+                err ? reject(err) : resolve({ bathroom: bathroom });
             });
-
-            logger.info('END: addBathroom');
-        } else {
-            doFailureApiCallback(status, callback);
-        }
+        })
+        .then(function(data) {
+            doSuccessApiCallback(data, true /* sanitize */, callback);
+        })
+        .catch(function(error) {
+            doFailureApiCallback(error, callback);
+        });
     };
 
     exports.removeBathroom = function(id, callback) {
-        var status = "ok!";
-        if (id != null) {
-            logger.info('BEGIN: removeBathroom ' + id);
+        new Promise(function(resolve, reject) {
+            if (id != null) {
+                logger.info('BEGIN: removeBathroom ' + id);
 
-            Bathroom.remove({ _id: id }, function(err) {
-                doApiCallback((err == null), null, null, false, callback);
-            });
-        } else {
-            doFailureApiCallback("no id parameter found", callback);
-        }
+                Bathroom.remove({ _id: id }, function(err) {
+                    err ? reject(err) : resolve();
+                });
+            } else {
+                throw new Error("no id parameter found");
+            }
+        })
+        .then(function() {
+            doSuccessApiCallback(null, false, callback);
+        })
+        .catch(function(error) {
+            doFailureApiCallback(error, callback);
+        });
     };
 
     exports.modifyBathroom = function(id, lat, lon, name, cat, pending, callback) {
-        Bathroom.find({ _id: id }, function(err, bathroomsResult) {
-            if (bathroomsResult.length == 1) {
-                var bathroom = bathroomsResult[0];
-                if ((lat != null) && (lon != null)) {
-                    bathroom.loc = helpers.create2dSphere(lat, lon);
-                }
-                if (name != null) {
-                    bathroom.name = name;
-                }
-                if (cat != null) {
-                    bathroom.category = cat;
-                }
-                if (pending != null) {
-                    bathroom.pending = pending;
-                }
-                bathroom.save(function(err, bathroomResult) {
-                    doApiCallback((err == null), err, { bathroom: bathroomResult }, true, callback);
-                });
-            } else {
-                doFailureApiCallback("id not found", callback);
+        // Find the bathroom
+        return findBathroom(id)
+        // Update the bathroom and save
+        .then(function(bathroom) {
+            if ((lat != null) && (lon != null)) {
+                bathroom.loc = helpers.create2dSphere(lat, lon);
             }
+            if (name != null) {
+                bathroom.name = name;
+            }
+            if (cat != null) {
+                bathroom.category = cat;
+            }
+            if (pending != null) {
+                bathroom.pending = pending;
+            }
+
+            return new Promise(function(resolve, reject) {
+                bathroom.save(function(err, bathroomResult) {
+                    err ? reject(err) : resolve({bathroom: bathroomResult});
+                });
+            });
+        })
+        .then(function(data) {
+            doSuccessApiCallback(data, true, callback);
+        })
+        .catch(function(error) {
+            doFailureApiCallback(error, callback);
         });
     };
 
     exports.addReview = function(id, rating, text, callback) {
-
-        if (id == null) {
-            doFailureApiCallback('id param missing', callback);
-        } else if (!helpers.isNumeric(rating)) {
-            doFailureApiCallback('rating param missing or not numeric');
-        } else if (text == null) {
-            doFailureApiCallback('text param missing');
-        }
-
-        Bathroom.find({ _id: id }, function(err, bathroomsResult) {
-            if (bathroomsResult.length == 1) {
-                var bathroom = bathroomsResult[0];
-                bathroom.rating.reviews.push({
-                    rating: rating,
-                    text: text,
-                    date: new Date()
-                });
-
-                // Re-calculate avg and count
-                bathroom.rating.avg = 0;
-                bathroom.rating.count = bathroom.rating.reviews.length;
-                if (bathroom.rating.count > 0) {
-                    for (var i = 0; i < bathroom.rating.reviews.length; i++) {
-                        bathroom.rating.avg += bathroom.rating.reviews[i].rating;
-                    }
-                    bathroom.rating.avg /= bathroom.rating.count;
-                }
-
-                bathroom.save(function(err) {
-                    doApiCallback((err == null), err, { bathroom: bathroom }, true, callback);
-                });
-            } else {
-                doFailureApiCallback('id not found', callback);
+        // First validate the parameters
+        return new Promise(function(resolve, reject) {
+            if (id == null) {
+                throw new Error('id param missing');
             }
+            if (!helpers.isNumeric(rating)) {
+                throw new Error('rating param missing or not numeric');
+            }
+            if (text == null) {
+                throw new Error('text param missing');
+            }
+            resolve();
+        })
+        // Then find the bathroom
+        .then(function() {
+            return findBathroom(id);
+        })
+        // Add the review and update the review average
+        .then(function(bathroom) {
+            console.log('line1');
+            bathroom.rating.reviews.push({
+                rating: rating,
+                text: text,
+                date: new Date()
+            });
+
+            return updateBathroomRatingAverage(bathroom);
+        })
+        .then(function(bathroom) {
+            doSuccessApiCallback({ bathroom: bathroom }, true, callback);
+        })
+        .catch(function(error) {
+            doFailureApiCallback(error, callback);
         });
     };
 
     exports.removeReview = function(bathroomId, reviewId, callback) {
-        // TODO: Null check
-        Bathroom.update({ _id: bathroomId }, 
-            { $pull: { "rating.reviews": { _id: reviewId } } },
-            null, function(err, numAffected) {
-                if (err == null) {
-                    updateRatingsDocument(bathroomId, null, null, callback);
-                } else {
-                    doFailureApiCallback(err, callback);
-                }
-            });
+        // Remove the review
+        new Promise(function(resolve, reject) {
+            Bathroom.update({ _id: bathroomId }, 
+                { $pull: { "rating.reviews": { _id: reviewId } } },
+                null, function(err, numAffected) {
+                    err ? reject(err) : resolve(bathroomId);
+                });
+        })
+        // Find the bathroom
+        .then(function(bathroomId) {
+            return findBathroom(bathroomId);
+        })
+        // Update the review average
+        .then(function(bathroom) {
+            return updateBathroomRatingAverage(bathroom);
+        })
+        .then(function(bathroom) {
+            doSuccessApiCallback({ bathroom: bathroom }, true, callback);
+        })
+        .catch(function(error) {
+            doFailureApiCallback(err, callback);
+        });
     };
 
     exports.clearDatabase = function(callback) {
@@ -290,7 +332,8 @@ function sanitizeMongooseResult(doc) {
     return JSON.parse(JSON.stringify(doc));
 }
 
-function doApiCallback(success, message, data, sanitize, callback) {
+function createApiReturn(success, message, data, sanitize) {
+    console.log('before api return');
     var out = {
         result: {
             ok: success ? 1 : 0,
@@ -304,42 +347,49 @@ function doApiCallback(success, message, data, sanitize, callback) {
     for (var prop in data) {
         out[prop] = sanitize ? sanitizeMongooseResult(data[prop]) : data[prop];
     }
+    console.log('after api return');
+    return out;
+}
 
+function doApiCallback(success, message, data, sanitize, callback) {
+    var out = createApiReturn(success, message, data, sanitize);
     callback(out);
+}
+
+function doSuccessApiCallback(data, sanitize, callback) {
+    doApiCallback(true, null, data, sanitize, callback);
 }
 
 function doFailureApiCallback(message, callback) {
     doApiCallback(false, message, null, false, callback);
 }
 
-function updateRatingsDocument(id, newRating, newText, callback) {
-    Bathroom.find({ _id: id }, function(err, bathroomsResult) {
-        if (bathroomsResult.length == 1) {
-            var bathroom = bathroomsResult[0];
-
-            if (newRating != null) {
-                bathroom.rating.reviews.push({
-                    rating: rating,
-                    text: text,
-                    date: new Date()
-                });
+function findBathroom(bathroomId) {
+    return new Promise(function(resolve, reject) {
+        Bathroom.find({ _id: bathroomId }, function(err, bathroomsResult) {
+            if (bathroomsResult.length === 1) {
+                resolve(bathroomsResult[0]);
+            } else {
+                reject(new Error('id not found'));
             }
+        });
+    });
+}
 
-            // Re-calculate avg and count
-            bathroom.rating.avg = 0;
-            bathroom.rating.count = bathroom.rating.reviews.length;
-            if (bathroom.rating.count > 0) {
-                for (var i = 0; i < bathroom.rating.reviews.length; i++) {
-                    bathroom.rating.avg += bathroom.rating.reviews[i].rating;
-                }
-                bathroom.rating.avg /= bathroom.rating.count;
+function updateBathroomRatingAverage(bathroom) {
+    return new Promise(function(resolve, reject) {
+        // Re-calculate avg and count
+        bathroom.rating.avg = 0;
+        bathroom.rating.count = bathroom.rating.reviews.length;
+        if (bathroom.rating.count > 0) {
+            for (var i = 0; i < bathroom.rating.reviews.length; i++) {
+                bathroom.rating.avg += bathroom.rating.reviews[i].rating;
             }
-
-            bathroom.save(function(err) {
-                doApiCallback((err == null), err, { bathroom: bathroom }, true, callback);
-            });
-        } else {
-            doFailureApiCallback('id not found', callback);
+            bathroom.rating.avg /= bathroom.rating.count;
         }
+
+        bathroom.save(function(err) {
+            err ?  reject(err) : resolve(bathroom);
+        });
     });
 }
