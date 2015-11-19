@@ -28,7 +28,7 @@ var reviews = [
     }
 ];
 
-exports.testAddBathroom = {
+exports.testBathrooms = {
 
     setupTest: function(test) {
         test.expect(3);
