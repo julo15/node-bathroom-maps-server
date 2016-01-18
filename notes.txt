@@ -1,0 +1,10 @@
+To start the database:
+
+    sudo mongod --dbpath <path>
+
+    On test machine, dbpath is ~/Documents/mongo/data/db
+
+    Need to sudo for some access issues
+
+To run tests:
+
