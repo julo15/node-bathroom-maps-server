@@ -6,5 +6,20 @@ To start the database:
 
     Need to sudo for some access issues
 
+To start the app:
+
+    node app.js
+
+    The node app is configured to always use the mongodb on 127.0.0.1:27017
+    By default, the node app uses the 'test' db. On prod, we indeed use the 'test' db.
+
+To backup/restore the database:
+
+    mongoexport --db test --collection bathrooms --out bathrooms.json --host 127.0.0.1:27017
+    mongoimport --db test --collection bathrooms --drop --file bathrooms.json --host 127.0.0.1:27017
+
+    We are storing everything today into the bathrooms collection.
+    When reviews get moved out of the bathrooms collection, we'll need to export that too.
+
 To run tests:
 
